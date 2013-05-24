@@ -19,6 +19,12 @@ import org.springframework.web.socket.sockjs.SockJsService;
 import org.springframework.web.socket.sockjs.support.DefaultSockJsService;
 import org.springframework.web.socket.sockjs.support.SockJsHttpRequestHandler;
 import org.springframework.web.socket.support.PerConnectionWebSocketHandler;
+import org.springframework.web.stomp.adapter.StompMessageProcessor;
+import org.springframework.web.stomp.adapter.StompWebSocketHandler;
+import org.springframework.web.stomp.server.ReactorServerStompMessageProcessor;
+import org.springframework.web.stomp.server.SimpleStompReactorService;
+
+import reactor.core.Reactor;
 
 @Configuration
 @EnableWebMvc
@@ -39,6 +45,13 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 
 		urlMap.put("/sockjs/echo/**", new SockJsHttpRequestHandler(sockJsService, echoWebSocketHandler()));
 		urlMap.put("/sockjs/snake/**", new SockJsHttpRequestHandler(sockJsService, snakeWebSocketHandler()));
+
+		Reactor reactor = new Reactor();
+		StompMessageProcessor stompProcessor = new ReactorServerStompMessageProcessor(reactor);
+		WebSocketHandler stompHandler = new StompWebSocketHandler(stompProcessor);
+		urlMap.put("/stomp/echo/**", new SockJsHttpRequestHandler(sockJsService, stompHandler));
+
+		new SimpleStompReactorService(reactor);
 
 		SimpleUrlHandlerMapping hm = new SimpleUrlHandlerMapping();
 		hm.setOrder(-1);
