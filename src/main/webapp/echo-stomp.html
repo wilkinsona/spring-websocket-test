@@ -56,6 +56,7 @@
     <script type="text/javascript">
         var ws = null;
         var stompClient = null;
+        var destination = '/topic/echo';
 
         var transport = 'websocket';
 
@@ -71,14 +72,20 @@
             //     'iframe-htmlfile', 'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling']
 
             ws = new SockJS('/spring-websocket-test/stomp/echo', undefined, {protocols_whitelist: [transport]});
-            
+            // ws = new SockJS('http://127.0.0.1:55674/stomp', undefined, {protocols_whitelist: [transport]});
+
             var on_connect = function() {
                 log('stomp connected');
                 setConnected(true);
                 
-                stompClient.subscribe("/echo", function(message) {
-                    log('Received: ' + message);
+                stompClient.subscribe(destination, function(message) {
+                    log('Message [' + destination + ']: ' + message);
                 });
+
+                stompClient.subscribe("/init", function(message) {
+                    log('Message [/init]' + message);
+                });
+
             };
             var on_error =  function(error) {
                 console.log('stomp error ' + error);
@@ -104,6 +111,7 @@
                 var message = document.getElementById('message').value;
                 log('Sent: ' + message);
                 
+                stompClient.send(destination, {receipt:"123"}, message);
                 stompClient.send("/echo", {}, message);
                 
             } else {

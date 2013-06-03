@@ -22,7 +22,7 @@
 		<level value="trace" />
 	</logger>
 
-	<logger name="org.springframework.web.stomp">
+	<logger name="org.springframework.web.messaging">
 		<level value="trace" />
 	</logger>
 

@@ -5,10 +5,14 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.samples.websocket.echo.EchoWebSocketHandler;
 import org.springframework.samples.websocket.snake.websockethandler.SnakeWebSocketHandler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.web.messaging.stomp.service.AnnotationStompService;
+import org.springframework.web.messaging.stomp.service.RelayStompService;
+import org.springframework.web.messaging.stomp.socket.DefaultStompWebSocketHandler;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -19,19 +23,21 @@ import org.springframework.web.socket.sockjs.SockJsService;
 import org.springframework.web.socket.sockjs.support.DefaultSockJsService;
 import org.springframework.web.socket.sockjs.support.SockJsHttpRequestHandler;
 import org.springframework.web.socket.support.PerConnectionWebSocketHandler;
-import org.springframework.web.stomp.adapter.StompMessageProcessor;
-import org.springframework.web.stomp.adapter.StompWebSocketHandler;
-import org.springframework.web.stomp.server.ReactorServerStompMessageProcessor;
-import org.springframework.web.stomp.server.SimpleStompReactorService;
 
+import reactor.core.Environment;
 import reactor.core.Reactor;
 
 @Configuration
 @EnableWebMvc
+@ComponentScan(basePackages="org.springframework.samples")
 public class WebConfig extends WebMvcConfigurerAdapter {
+
+	private static final String[] rabbitDestinations = new String[] {
+		"/exchange/**", "/queue/*", "/amq/queue/*", "/topic/*" };
 
 	@Autowired
 	private RootConfig rootConfig;
+
 
 	@Bean
 	public SimpleUrlHandlerMapping handlerMapping() {
@@ -39,19 +45,11 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 		SockJsService sockJsService = new DefaultSockJsService(sockJsTaskScheduler());
 
 		Map<String, Object> urlMap = new HashMap<String, Object>();
-
 		urlMap.put("/echoWebSocketHandler", new WebSocketHttpRequestHandler(echoWebSocketHandler()));
 		urlMap.put("/snakeWebSocketHandler", new WebSocketHttpRequestHandler(snakeWebSocketHandler()));
-
 		urlMap.put("/sockjs/echo/**", new SockJsHttpRequestHandler(sockJsService, echoWebSocketHandler()));
 		urlMap.put("/sockjs/snake/**", new SockJsHttpRequestHandler(sockJsService, snakeWebSocketHandler()));
-
-		Reactor reactor = new Reactor();
-		StompMessageProcessor stompProcessor = new ReactorServerStompMessageProcessor(reactor);
-		WebSocketHandler stompHandler = new StompWebSocketHandler(stompProcessor);
-		urlMap.put("/stomp/echo/**", new SockJsHttpRequestHandler(sockJsService, stompHandler));
-
-		new SimpleStompReactorService(reactor);
+		urlMap.put("/stomp/echo/**", new SockJsHttpRequestHandler(sockJsService, stompWebSocketHandler()));
 
 		SimpleUrlHandlerMapping hm = new SimpleUrlHandlerMapping();
 		hm.setOrder(-1);
@@ -71,9 +69,45 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 
 	@Bean
+	public WebSocketHandler stompWebSocketHandler() {
+		return new DefaultStompWebSocketHandler(reactor());
+	}
+
+	@Bean
+	public Reactor reactor() {
+		return new Reactor(new Environment());
+	}
+
+	@Bean
+	public RelayStompService rabbitStompService() {
+		RelayStompService service = new RelayStompService(reactor(), stompRelayTaskScheduler());
+		service.setAllowedDestinations(rabbitDestinations);
+		return service;
+	}
+
+	@Bean
+	public AnnotationStompService annotationStompService() {
+		AnnotationStompService service = new AnnotationStompService(reactor());
+		service.setDisallowedDestinations(rabbitDestinations);
+		return service;
+	}
+
+//	@Bean
+//	public SimpleStompService simpleStompService() {
+//		return new SimpleStompService(reactor());
+//	}
+
+	@Bean
 	public ThreadPoolTaskScheduler sockJsTaskScheduler() {
 		ThreadPoolTaskScheduler taskScheduler = new ThreadPoolTaskScheduler();
 		taskScheduler.setThreadNamePrefix("SockJS-");
+		return taskScheduler;
+	}
+
+	@Bean
+	public ThreadPoolTaskScheduler stompRelayTaskScheduler() {
+		ThreadPoolTaskScheduler taskScheduler = new ThreadPoolTaskScheduler();
+		taskScheduler.setThreadNamePrefix("StompRelay-");
 		return taskScheduler;
 	}
 
