@@ -1,33 +1,46 @@
 package org.springframework.samples.websocket.echo;
 
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.springframework.http.MediaType;
+import org.springframework.messaging.GenericMessage;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.messaging.MessageBroker;
-import org.springframework.web.messaging.MessageMapping;
-import org.springframework.web.messaging.MessageType;
-import org.springframework.web.messaging.Subscription;
+import org.springframework.web.messaging.annotation.SubscribeEvent;
 
 @Controller
 public class StompController {
 
 
-	@MessageMapping(value="/init", messageType=MessageType.SUBSCRIBE)
-	public void handleSubscribe(Subscription subscription, MessageBroker broker) throws Exception {
+	@SubscribeEvent(value="/init")
+	public Message<?> handleSubscribe(MessageChannel channel) throws Exception {
 
-		subscription.reply("message1:some data");
-		subscription.reply("message2:some other kind of data");
-		subscription.reply(Collections.singletonMap("a", "b"), MediaType.APPLICATION_JSON);
+		Map<String, Object> headers = new HashMap<String, Object>();
+		headers.put("destination", "/topic/echo");
+		Message<String> message = new GenericMessage<String>("simulated echo", headers);
 
-		broker.send("/topic/echo", "echoed data", MediaType.TEXT_PLAIN);
-		broker.send("/topic/echo", Collections.singletonMap("c", "d"), MediaType.APPLICATION_JSON);
+		channel.send(message);
+
+//		channel.send("/topic/echo", Collections.singletonMap("c", "d"), MediaType.APPLICATION_JSON);
+
+//		subscription.reply("message2:some other kind of data");
+//		subscription.reply(Collections.singletonMap("a", "b"), MediaType.APPLICATION_JSON);
+
+		headers = new HashMap<String, Object>();
+		headers.put("destination", "/init");
+		return new GenericMessage<String>("message 1: some data", headers);
 	}
 
-	@MessageMapping(value="/echo", messageType=MessageType.SEND)
-	public void handleEcho(String message, MessageBroker broker) throws Exception {
+	@MessageMapping(value="/echo")
+	public void handleEcho(String text, MessageChannel channel) throws Exception {
 
-		broker.send("/topic/echo", "Echoing: " + message, MediaType.TEXT_PLAIN);
+		Map<String, Object> headers = new HashMap<String, Object>();
+		headers.put("destination", "/topic/echo");
+		Message<String> message = new GenericMessage<String>("Echoing: " + text, headers);
+
+		channel.send(message);
 	}
 
 }

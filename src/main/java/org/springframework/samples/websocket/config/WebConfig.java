@@ -10,9 +10,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.samples.websocket.echo.EchoWebSocketHandler;
 import org.springframework.samples.websocket.snake.websockethandler.SnakeWebSocketHandler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.web.messaging.stomp.service.AnnotationStompService;
-import org.springframework.web.messaging.stomp.service.RelayStompService;
+import org.springframework.web.messaging.event.EventBus;
+import org.springframework.web.messaging.event.ReactorEventBus;
+import org.springframework.web.messaging.service.method.AnnotationMessageService;
 import org.springframework.web.messaging.stomp.socket.DefaultStompWebSocketHandler;
+import org.springframework.web.messaging.stomp.support.RelayStompService;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -24,8 +26,8 @@ import org.springframework.web.socket.sockjs.support.DefaultSockJsService;
 import org.springframework.web.socket.sockjs.support.SockJsHttpRequestHandler;
 import org.springframework.web.socket.support.PerConnectionWebSocketHandler;
 
-import reactor.core.Environment;
 import reactor.core.Reactor;
+import reactor.core.Reactors;
 
 @Configuration
 @EnableWebMvc
@@ -70,24 +72,25 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 
 	@Bean
 	public WebSocketHandler stompWebSocketHandler() {
-		return new DefaultStompWebSocketHandler(reactor());
+		return new DefaultStompWebSocketHandler(eventBus());
 	}
 
 	@Bean
-	public Reactor reactor() {
-		return new Reactor(new Environment());
+	public EventBus eventBus() {
+		Reactor reactor = Reactors.reactor().get();
+		return new ReactorEventBus(reactor);
 	}
 
 	@Bean
 	public RelayStompService rabbitStompService() {
-		RelayStompService service = new RelayStompService(reactor(), stompRelayTaskScheduler());
+		RelayStompService service = new RelayStompService(eventBus(), stompRelayTaskScheduler());
 		service.setAllowedDestinations(rabbitDestinations);
 		return service;
 	}
 
 	@Bean
-	public AnnotationStompService annotationStompService() {
-		AnnotationStompService service = new AnnotationStompService(reactor());
+	public AnnotationMessageService annotationStompService() {
+		AnnotationMessageService service = new AnnotationMessageService(eventBus());
 		service.setDisallowedDestinations(rabbitDestinations);
 		return service;
 	}

@@ -18,6 +18,7 @@ public class EchoWebSocketHandler extends TextWebSocketHandlerAdapter {
 
 	private final EchoService echoService;
 
+
 	@Autowired
 	public EchoWebSocketHandler(EchoService echoService) {
 		this.echoService = echoService;

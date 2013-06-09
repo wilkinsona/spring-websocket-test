@@ -83,9 +83,9 @@
                 });
 
                 stompClient.subscribe("/init", function(message) {
-                    log('Message [/init]' + message);
+                   log('Message [/init]' + message);
                 });
-
+ 
             };
             var on_error =  function(error) {
                 console.log('stomp error ' + error);
