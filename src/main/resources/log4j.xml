@@ -25,7 +25,15 @@
 	<logger name="org.springframework.web.messaging">
 		<level value="trace" />
 	</logger>
-
+	
+	<logger name="org.springframework.integration.stomp">
+		<level value="trace" />
+	</logger>
+	
+	<logger name="org.springframework.integration.websocket">
+		<level value="trace" />
+	</logger>
+	
 	<root>
 		<priority value="warn" />
 		<appender-ref ref="console" />

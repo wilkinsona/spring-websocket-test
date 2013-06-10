@@ -18,9 +18,8 @@ package org.springframework.samples.websocket.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.samples.websocket.echo.EchoEndpoint;
+import org.springframework.samples.websocket.echo.StompController;
 import org.springframework.web.socket.server.endpoint.ServerEndpointExporter;
-import org.springframework.web.socket.server.endpoint.ServerEndpointRegistration;
 
 @Configuration
 public class EndpointConfig {
@@ -34,13 +33,8 @@ public class EndpointConfig {
 	}
 
 	@Bean
-	public ServerEndpointRegistration echoEndpoint() {
-		return new ServerEndpointRegistration("/echoEndpoint", EchoEndpoint.class);
-	}
-
-	@Bean
-	public ServerEndpointRegistration echoEndpointSingleton() {
-		return new ServerEndpointRegistration("/echoEndpointSingleton", new EchoEndpoint(this.rootConfig.echoService()));
+	StompController stompController() {
+		return new StompController();
 	}
 
 }

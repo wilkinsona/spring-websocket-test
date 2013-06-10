@@ -7,27 +7,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.samples.websocket.echo.EchoWebSocketHandler;
-import org.springframework.samples.websocket.snake.websockethandler.SnakeWebSocketHandler;
+import org.springframework.integration.channel.DirectChannel;
+import org.springframework.integration.core.MessageHandler;
+import org.springframework.integration.stomp.GenericToStompTransformer;
+import org.springframework.integration.stomp.StompConnectHandlingChannelInterceptor;
+import org.springframework.integration.stomp.StompToWebSocketTransformer;
+import org.springframework.integration.stomp.WebSocketToStompTransformer;
+import org.springframework.integration.stomp.service.AbstractMessageService;
+import org.springframework.integration.stomp.service.AnnotationMessageService;
+import org.springframework.integration.stomp.service.MessageServiceMessageHandler;
+import org.springframework.integration.transformer.MessageTransformingHandler;
+import org.springframework.integration.websocket.WebSocketMessageDrivenEndpoint;
+import org.springframework.integration.websocket.WebSocketOutboundHandler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.web.messaging.event.EventBus;
-import org.springframework.web.messaging.event.ReactorEventBus;
-import org.springframework.web.messaging.service.method.AnnotationMessageService;
-import org.springframework.web.messaging.stomp.socket.DefaultStompWebSocketHandler;
-import org.springframework.web.messaging.stomp.support.RelayStompService;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping;
 import org.springframework.web.socket.WebSocketHandler;
-import org.springframework.web.socket.server.support.WebSocketHttpRequestHandler;
 import org.springframework.web.socket.sockjs.SockJsService;
 import org.springframework.web.socket.sockjs.support.DefaultSockJsService;
 import org.springframework.web.socket.sockjs.support.SockJsHttpRequestHandler;
-import org.springframework.web.socket.support.PerConnectionWebSocketHandler;
-
-import reactor.core.Reactor;
-import reactor.core.Reactors;
 
 @Configuration
 @EnableWebMvc
@@ -47,10 +47,6 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 		SockJsService sockJsService = new DefaultSockJsService(sockJsTaskScheduler());
 
 		Map<String, Object> urlMap = new HashMap<String, Object>();
-		urlMap.put("/echoWebSocketHandler", new WebSocketHttpRequestHandler(echoWebSocketHandler()));
-		urlMap.put("/snakeWebSocketHandler", new WebSocketHttpRequestHandler(snakeWebSocketHandler()));
-		urlMap.put("/sockjs/echo/**", new SockJsHttpRequestHandler(sockJsService, echoWebSocketHandler()));
-		urlMap.put("/sockjs/snake/**", new SockJsHttpRequestHandler(sockJsService, snakeWebSocketHandler()));
 		urlMap.put("/stomp/echo/**", new SockJsHttpRequestHandler(sockJsService, stompWebSocketHandler()));
 
 		SimpleUrlHandlerMapping hm = new SimpleUrlHandlerMapping();
@@ -61,39 +57,89 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 
 	@Bean
-	public WebSocketHandler echoWebSocketHandler() {
-		return new PerConnectionWebSocketHandler(EchoWebSocketHandler.class);
-	}
-
-	@Bean
-	public WebSocketHandler snakeWebSocketHandler() {
-		return new SnakeWebSocketHandler();
-	}
-
-	@Bean
 	public WebSocketHandler stompWebSocketHandler() {
-		return new DefaultStompWebSocketHandler(eventBus());
+		return new WebSocketMessageDrivenEndpoint(webSocketInputChannel());
 	}
 
 	@Bean
-	public EventBus eventBus() {
-		Reactor reactor = Reactors.reactor().get();
-		return new ReactorEventBus(reactor);
+	public DirectChannel webSocketInputChannel() {
+		return new DirectChannel();
 	}
 
 	@Bean
-	public RelayStompService rabbitStompService() {
-		RelayStompService service = new RelayStompService(eventBus(), stompRelayTaskScheduler());
-		service.setAllowedDestinations(rabbitDestinations);
-		return service;
+	public DirectChannel stompInputChannel() {
+		DirectChannel channel = new DirectChannel();
+		channel.addInterceptor(new StompConnectHandlingChannelInterceptor(stompOutputChannel()));
+		return channel;
 	}
 
 	@Bean
-	public AnnotationMessageService annotationStompService() {
-		AnnotationMessageService service = new AnnotationMessageService(eventBus());
-		service.setDisallowedDestinations(rabbitDestinations);
-		return service;
+	public DirectChannel genericOutputChannel() {
+		return new DirectChannel();
 	}
+
+	@Bean
+	public DirectChannel stompOutputChannel() {
+		return new DirectChannel();
+	}
+
+	@Bean
+	public DirectChannel webSocketOutputChannel() {
+		return new DirectChannel();
+	}
+
+	@Bean
+	public AbstractMessageService messageService() {
+		return new AnnotationMessageService(genericOutputChannel());
+	}
+
+	@Bean
+	public MessageHandler inputMessageHandler() {
+		MessageServiceMessageHandler handler = new MessageServiceMessageHandler(messageService());
+		stompInputChannel().subscribe(handler);
+
+		return handler;
+	}
+
+	@Bean
+	public MessageTransformingHandler webSocketToStompTransformer() {
+		MessageTransformingHandler handler = new MessageTransformingHandler(new WebSocketToStompTransformer());
+		handler.setOutputChannel(stompInputChannel());
+
+		webSocketInputChannel().subscribe(handler);
+
+		return handler;
+	}
+
+	@Bean
+	public MessageTransformingHandler genericToStompTransformer() {
+		MessageTransformingHandler handler = new MessageTransformingHandler(new GenericToStompTransformer());
+		handler.setOutputChannel(stompOutputChannel());
+		genericOutputChannel().subscribe(handler);
+		return handler;
+	}
+
+	@Bean
+	public MessageTransformingHandler stompToWebSocketTransformer() {
+		MessageTransformingHandler handler = new MessageTransformingHandler(new StompToWebSocketTransformer());
+		handler.setOutputChannel(webSocketOutputChannel());
+		stompOutputChannel().subscribe(handler);
+		return handler;
+	}
+
+	@Bean
+	public MessageHandler outputMessageHandler() {
+		WebSocketOutboundHandler handler = new WebSocketOutboundHandler();
+		webSocketOutputChannel().subscribe(handler);
+		return handler;
+	}
+
+//	@Bean
+//	public RelayStompService rabbitStompService() {
+//		RelayStompService service = new RelayStompService(reactor(), stompRelayTaskScheduler());
+//		service.setAllowedDestinations(rabbitDestinations);
+//		return service;
+//	}
 
 //	@Bean
 //	public SimpleStompService simpleStompService() {
