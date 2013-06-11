@@ -15,9 +15,9 @@ public class StompController {
 	@SubscribeEvent(value="/init")
 	public Message<?> handleSubscribe(MessageChannel channel) throws Exception {
 
-		PubSubHeaders headers = new PubSubHeaders();
+		PubSubHeaders headers = PubSubHeaders.create();
 		headers.setDestination("/topic/echo");
-		Message<String> message = new GenericMessage<String>("simulated echo", headers.getMessageHeaders());
+		Message<String> message = new GenericMessage<String>("simulated echo", headers.toMessageHeaders());
 
 		channel.send(message);
 
@@ -26,17 +26,17 @@ public class StompController {
 //		subscription.reply("message2:some other kind of data");
 //		subscription.reply(Collections.singletonMap("a", "b"), MediaType.APPLICATION_JSON);
 
-		headers = new PubSubHeaders();
+		headers = PubSubHeaders.create();
 		headers.setDestination("/init");
-		return new GenericMessage<String>("message 1: some data", headers.getMessageHeaders());
+		return new GenericMessage<String>("message 1: some data", headers.toMessageHeaders());
 	}
 
 	@MessageMapping(value="/echo")
 	public void handleEcho(String text, MessageChannel channel) throws Exception {
 
-		PubSubHeaders headers = new PubSubHeaders();
+		PubSubHeaders headers = PubSubHeaders.create();
 		headers.setDestination("/topic/echo");
-		Message<String> message = new GenericMessage<String>("Echoing: " + text, headers.getMessageHeaders());
+		Message<String> message = new GenericMessage<String>("Echoing: " + text, headers.toMessageHeaders());
 
 		channel.send(message);
 	}
