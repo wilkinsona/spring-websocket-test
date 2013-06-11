@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.channel.DirectChannel;
+import org.springframework.integration.channel.PublishSubscribeChannel;
 import org.springframework.integration.core.MessageHandler;
 import org.springframework.integration.stomp.GenericToStompTransformer;
 import org.springframework.integration.stomp.StompConnectHandlingChannelInterceptor;
@@ -16,7 +17,10 @@ import org.springframework.integration.stomp.WebSocketToStompTransformer;
 import org.springframework.integration.stomp.service.AbstractMessageService;
 import org.springframework.integration.stomp.service.AnnotationMessageService;
 import org.springframework.integration.stomp.service.MessageServiceMessageHandler;
+import org.springframework.integration.stomp.support.RelayStompService;
 import org.springframework.integration.transformer.MessageTransformingHandler;
+import org.springframework.integration.websocket.SessionManager;
+import org.springframework.integration.websocket.StandardSessionManager;
 import org.springframework.integration.websocket.WebSocketMessageDrivenEndpoint;
 import org.springframework.integration.websocket.WebSocketOutboundHandler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -57,8 +61,13 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 
 	@Bean
+	public SessionManager sessionManager() {
+		return new StandardSessionManager();
+	}
+
+	@Bean
 	public WebSocketHandler stompWebSocketHandler() {
-		return new WebSocketMessageDrivenEndpoint(webSocketInputChannel());
+		return new WebSocketMessageDrivenEndpoint(webSocketInputChannel(), sessionManager());
 	}
 
 	@Bean
@@ -67,14 +76,20 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 
 	@Bean
-	public DirectChannel stompInputChannel() {
-		DirectChannel channel = new DirectChannel();
-		channel.addInterceptor(new StompConnectHandlingChannelInterceptor(stompOutputChannel()));
+	public PublishSubscribeChannel stompInputChannel() {
+		PublishSubscribeChannel channel = new PublishSubscribeChannel();
+		// TODO This isn't required when CONNECT is being relayed to Rabbit. Configuration needs to be better.
+		// channel.addInterceptor(new StompConnectHandlingChannelInterceptor(stompOutputChannel()));
 		return channel;
 	}
 
 	@Bean
 	public DirectChannel genericOutputChannel() {
+		return new DirectChannel();
+	}
+
+	@Bean
+	public DirectChannel genericRelayChannel() {
 		return new DirectChannel();
 	}
 
@@ -90,7 +105,14 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 
 	@Bean
 	public AbstractMessageService messageService() {
-		return new AnnotationMessageService(genericOutputChannel());
+		return new AnnotationMessageService(genericOutputChannel(), genericRelayChannel());
+	}
+
+	@Bean
+	public RelayStompService relayStompService() {
+		RelayStompService relayStompService = new RelayStompService(stompRelayTaskScheduler(), stompOutputChannel());
+		relayStompService.setAllowedDestinations(rabbitDestinations);
+		return relayStompService;
 	}
 
 	@Bean
@@ -101,9 +123,18 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 		return handler;
 	}
 
+	@Bean MessageHandler relayMessageHandler() {
+		MessageServiceMessageHandler handler = new MessageServiceMessageHandler(relayStompService());
+		stompInputChannel().subscribe(handler);
+
+		return handler;
+	}
+
 	@Bean
 	public MessageTransformingHandler webSocketToStompTransformer() {
 		MessageTransformingHandler handler = new MessageTransformingHandler(new WebSocketToStompTransformer());
+		// When a heartbeat frame is received, no message is produced
+		handler.setRequiresReply(false);
 		handler.setOutputChannel(stompInputChannel());
 
 		webSocketInputChannel().subscribe(handler);
@@ -129,7 +160,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 
 	@Bean
 	public MessageHandler outputMessageHandler() {
-		WebSocketOutboundHandler handler = new WebSocketOutboundHandler();
+		WebSocketOutboundHandler handler = new WebSocketOutboundHandler(sessionManager());
 		webSocketOutputChannel().subscribe(handler);
 		return handler;
 	}

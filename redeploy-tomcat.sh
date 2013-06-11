@@ -9,8 +9,9 @@ rm -rf $TOMCAT/webapps/spring-websocket-test*
 
 cp target/spring-websocket-test.war $TOMCAT/webapps/
 
-$TOMCAT/bin/shutdown.sh
-sleep 3
+export CATALINA_PID=$TOMCAT/logs/tomcat.pid
+
+$TOMCAT/bin/shutdown.sh -force
 
 rm $TOMCAT/logs/*
 
