@@ -11,7 +11,6 @@ import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.channel.PublishSubscribeChannel;
 import org.springframework.integration.core.MessageHandler;
 import org.springframework.integration.stomp.GenericToStompTransformer;
-import org.springframework.integration.stomp.StompConnectHandlingChannelInterceptor;
 import org.springframework.integration.stomp.StompToWebSocketTransformer;
 import org.springframework.integration.stomp.WebSocketToStompTransformer;
 import org.springframework.integration.stomp.service.AbstractMessageService;
@@ -24,6 +23,7 @@ import org.springframework.integration.websocket.StandardSessionManager;
 import org.springframework.integration.websocket.WebSocketMessageDrivenEndpoint;
 import org.springframework.integration.websocket.WebSocketOutboundHandler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.web.messaging.stomp.StompCommand;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -93,6 +93,10 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 		return new DirectChannel();
 	}
 
+	@Bean DirectChannel stompRelayChannel() {
+		return new DirectChannel();
+	}
+
 	@Bean
 	public DirectChannel stompOutputChannel() {
 		return new DirectChannel();
@@ -126,6 +130,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	@Bean MessageHandler relayMessageHandler() {
 		MessageServiceMessageHandler handler = new MessageServiceMessageHandler(relayStompService());
 		stompInputChannel().subscribe(handler);
+		stompRelayChannel().subscribe(handler);
 
 		return handler;
 	}
@@ -143,10 +148,18 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 
 	@Bean
-	public MessageTransformingHandler genericToStompTransformer() {
-		MessageTransformingHandler handler = new MessageTransformingHandler(new GenericToStompTransformer());
+	public MessageTransformingHandler outputGenericToStompTransformer() {
+		MessageTransformingHandler handler = new MessageTransformingHandler(new GenericToStompTransformer(StompCommand.MESSAGE));
 		handler.setOutputChannel(stompOutputChannel());
 		genericOutputChannel().subscribe(handler);
+		return handler;
+	}
+
+	@Bean
+	public MessageTransformingHandler relayGenericToStompTransformer() {
+		MessageTransformingHandler handler = new MessageTransformingHandler(new GenericToStompTransformer(StompCommand.SEND));
+		handler.setOutputChannel(stompRelayChannel());
+		genericRelayChannel().subscribe(handler);
 		return handler;
 	}
 
