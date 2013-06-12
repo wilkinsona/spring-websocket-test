@@ -13,8 +13,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.messaging.event.EventBus;
 import org.springframework.web.messaging.event.ReactorEventBus;
 import org.springframework.web.messaging.service.method.AnnotationMessageService;
-import org.springframework.web.messaging.stomp.socket.DefaultStompWebSocketHandler;
 import org.springframework.web.messaging.stomp.support.RelayStompService;
+import org.springframework.web.messaging.stomp.support.StompWebSocketHandler;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -72,7 +72,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 
 	@Bean
 	public WebSocketHandler stompWebSocketHandler() {
-		return new DefaultStompWebSocketHandler(eventBus());
+		return new StompWebSocketHandler(eventBus());
 	}
 
 	@Bean
