@@ -7,23 +7,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.integration.MessageChannel;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.channel.PublishSubscribeChannel;
 import org.springframework.integration.core.MessageHandler;
+import org.springframework.integration.core.SubscribableChannel;
 import org.springframework.integration.stomp.GenericToStompTransformer;
+import org.springframework.integration.stomp.SiToSpringMessageChannel;
+import org.springframework.integration.stomp.SiToSpringSubscribableChannel;
+import org.springframework.integration.stomp.SpringToSiMessageHandler;
 import org.springframework.integration.stomp.StompToWebSocketTransformer;
 import org.springframework.integration.stomp.WebSocketToStompTransformer;
-import org.springframework.integration.stomp.service.AbstractMessageService;
-import org.springframework.integration.stomp.service.AnnotationMessageService;
-import org.springframework.integration.stomp.service.MessageServiceMessageHandler;
-import org.springframework.integration.stomp.support.RelayStompService;
 import org.springframework.integration.transformer.MessageTransformingHandler;
 import org.springframework.integration.websocket.SessionManager;
 import org.springframework.integration.websocket.StandardSessionManager;
 import org.springframework.integration.websocket.WebSocketMessageDrivenEndpoint;
 import org.springframework.integration.websocket.WebSocketOutboundHandler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.web.messaging.service.method.AnnotationPubSubMessageHandler;
 import org.springframework.web.messaging.stomp.StompCommand;
+import org.springframework.web.messaging.stomp.support.StompRelayPubSubMessageHandler;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -84,7 +87,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 
 	@Bean
-	public DirectChannel genericOutputChannel() {
+	public SubscribableChannel genericOutputChannel() {
 		return new DirectChannel();
 	}
 
@@ -108,31 +111,19 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 
 	@Bean
-	public AbstractMessageService messageService() {
-		return new AnnotationMessageService(genericOutputChannel(), genericRelayChannel());
+	public AnnotationPubSubMessageHandler messageService() {
+		AnnotationPubSubMessageHandler annotationPubSubMessageHandler = new AnnotationPubSubMessageHandler(new SiToSpringSubscribableChannel(genericRelayChannel()), new SiToSpringSubscribableChannel(genericOutputChannel()));
+		stompInputChannel().subscribe(new SpringToSiMessageHandler(annotationPubSubMessageHandler));
+		return annotationPubSubMessageHandler;
 	}
 
 	@Bean
-	public RelayStompService relayStompService() {
-		RelayStompService relayStompService = new RelayStompService(stompRelayTaskScheduler(), stompOutputChannel());
-		relayStompService.setAllowedDestinations(rabbitDestinations);
-		return relayStompService;
-	}
-
-	@Bean
-	public MessageHandler inputMessageHandler() {
-		MessageServiceMessageHandler handler = new MessageServiceMessageHandler(messageService());
-		stompInputChannel().subscribe(handler);
-
-		return handler;
-	}
-
-	@Bean MessageHandler relayMessageHandler() {
-		MessageServiceMessageHandler handler = new MessageServiceMessageHandler(relayStompService());
-		stompInputChannel().subscribe(handler);
-		stompRelayChannel().subscribe(handler);
-
-		return handler;
+	public StompRelayPubSubMessageHandler relayStompService() {
+		StompRelayPubSubMessageHandler stomp = new StompRelayPubSubMessageHandler(new SiToSpringSubscribableChannel(new PublishSubscribeChannel()), new SiToSpringMessageChannel<MessageChannel>(stompOutputChannel()), stompRelayTaskScheduler());
+		stompRelayChannel().subscribe(new SpringToSiMessageHandler(stomp));
+		stompInputChannel().subscribe(new SpringToSiMessageHandler(stomp));
+		stomp.setAllowedDestinations(rabbitDestinations);
+		return stomp;
 	}
 
 	@Bean

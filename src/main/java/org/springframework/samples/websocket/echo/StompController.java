@@ -18,16 +18,16 @@ public class StompController {
 	@SubscribeEvent("/init")
 	public Message<String> handleSubscribe(MessageChannel messageChannel) throws Exception {
 		// Messages sent to messageChannel are sent to the broker via the relay service
-		PubSubHeaders textHeaders = new PubSubHeaders();
+		PubSubHeaders textHeaders = PubSubHeaders.create();
 		textHeaders.setDestination("/topic/echo");
 		textHeaders.setContentType(MediaType.TEXT_PLAIN);
-		messageChannel.send(new GenericMessage<String>("echoed data", textHeaders.getMessageHeaders()));
+		messageChannel.send(new GenericMessage<String>("echoed data", textHeaders.toMessageHeaders()));
 
 		// You can send JSON too
-		PubSubHeaders jsonHeaders = new PubSubHeaders();
+		PubSubHeaders jsonHeaders = PubSubHeaders.create();
 		jsonHeaders.setDestination("/topic/echo");
 		jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
-		messageChannel.send(new GenericMessage<Map<String, String>>(Collections.singletonMap("c", "d"), jsonHeaders.getMessageHeaders()));
+		messageChannel.send(new GenericMessage<Map<String, String>>(Collections.singletonMap("c", "d"), jsonHeaders.toMessageHeaders()));
 
 		// If no destination is specified, a returned message is automatically sent to the destination that's being subscribed to
 		return new GenericMessage<String>("message1:some data");
@@ -35,10 +35,10 @@ public class StompController {
 
 	@MessageMapping("/echo")
 	public void handleEcho(String message, MessageChannel messageChannel) throws Exception {
-		PubSubHeaders headers = new PubSubHeaders();
+		PubSubHeaders headers = PubSubHeaders.create();
 		headers.setDestination("/topic/echo");
 
-		Message<String> echoed = new GenericMessage<String>("Echoing: " + message, headers.getMessageHeaders());
+		Message<String> echoed = new GenericMessage<String>("Echoing: " + message, headers.toMessageHeaders());
 
 		messageChannel.send(echoed);
 	}
