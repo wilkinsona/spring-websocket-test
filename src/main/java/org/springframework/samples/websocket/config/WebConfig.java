@@ -7,14 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.SubscribableChannel;
 import org.springframework.samples.websocket.echo.EchoWebSocketHandler;
 import org.springframework.samples.websocket.snake.websockethandler.SnakeWebSocketHandler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.web.messaging.event.EventBus;
-import org.springframework.web.messaging.event.ReactorEventBus;
-import org.springframework.web.messaging.service.method.AnnotationMessageService;
-import org.springframework.web.messaging.stomp.support.RelayStompService;
+import org.springframework.web.messaging.service.method.AnnotationPubSubMessageHandler;
+import org.springframework.web.messaging.stomp.support.StompRelayPubSubMessageHandler;
 import org.springframework.web.messaging.stomp.support.StompWebSocketHandler;
+import org.springframework.web.messaging.support.ReactorMessageChannel;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -72,32 +72,42 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 
 	@Bean
 	public WebSocketHandler stompWebSocketHandler() {
-		return new StompWebSocketHandler(eventBus());
+		return new StompWebSocketHandler(publishChannel(), clientChannel());
 	}
 
 	@Bean
-	public EventBus eventBus() {
-		Reactor reactor = Reactors.reactor().get();
-		return new ReactorEventBus(reactor);
+	public SubscribableChannel publishChannel() { return new ReactorMessageChannel(reactor()); }
+
+	@Bean
+	public SubscribableChannel clientChannel() { return new ReactorMessageChannel(reactor()); }
+
+	@Bean
+	public Reactor reactor() {
+		return Reactors.reactor().get();
 	}
 
 	@Bean
-	public RelayStompService rabbitStompService() {
-		RelayStompService service = new RelayStompService(eventBus(), stompRelayTaskScheduler());
-		service.setAllowedDestinations(rabbitDestinations);
-		return service;
+	public StompRelayPubSubMessageHandler stompRelayMessageHandler() {
+		StompRelayPubSubMessageHandler handler = new StompRelayPubSubMessageHandler(
+				publishChannel(), clientChannel(), stompRelayTaskScheduler());
+		handler.setAllowedDestinations(rabbitDestinations);
+		return handler;
 	}
 
 	@Bean
-	public AnnotationMessageService annotationStompService() {
-		AnnotationMessageService service = new AnnotationMessageService(eventBus());
-		service.setDisallowedDestinations(rabbitDestinations);
-		return service;
+	public AnnotationPubSubMessageHandler annotationStompService() {
+		AnnotationPubSubMessageHandler handler = new AnnotationPubSubMessageHandler(
+				publishChannel(), clientChannel());
+		handler.setDisallowedDestinations(rabbitDestinations);
+		return handler;
 	}
 
 //	@Bean
-//	public SimpleStompService simpleStompService() {
-//		return new SimpleStompService(reactor());
+//	public ReactorPubSubMessageHandler simpleStompService() {
+//		ReactorPubSubMessageHandler handler = new ReactorPubSubMessageHandler(
+//				publishChannel(), clientChannel(), reactor());
+//		handler.setDisallowedDestinations(rabbitDestinations);
+//		return handler;
 //	}
 
 	@Bean
