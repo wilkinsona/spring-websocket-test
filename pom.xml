@@ -44,6 +44,11 @@
 			<artifactId>reactor-core</artifactId>
 			<version>1.0.0.BUILD-SNAPSHOT</version>
 		</dependency>
+		<dependency>
+			<groupId>reactor</groupId>
+			<artifactId>reactor-tcp</artifactId>
+			<version>1.0.0.BUILD-SNAPSHOT</version>
+		</dependency>
 
 		<dependency>
 			<groupId>javax.websocket</groupId>

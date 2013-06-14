@@ -88,8 +88,7 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 
 	@Bean
 	public StompRelayPubSubMessageHandler stompRelayMessageHandler() {
-		StompRelayPubSubMessageHandler handler = new StompRelayPubSubMessageHandler(
-				publishChannel(), clientChannel(), stompRelayTaskScheduler());
+		StompRelayPubSubMessageHandler handler = new StompRelayPubSubMessageHandler(publishChannel(), clientChannel());
 		handler.setAllowedDestinations(rabbitDestinations);
 		return handler;
 	}
@@ -114,13 +113,6 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	public ThreadPoolTaskScheduler sockJsTaskScheduler() {
 		ThreadPoolTaskScheduler taskScheduler = new ThreadPoolTaskScheduler();
 		taskScheduler.setThreadNamePrefix("SockJS-");
-		return taskScheduler;
-	}
-
-	@Bean
-	public ThreadPoolTaskScheduler stompRelayTaskScheduler() {
-		ThreadPoolTaskScheduler taskScheduler = new ThreadPoolTaskScheduler();
-		taskScheduler.setThreadNamePrefix("StompRelay-");
 		return taskScheduler;
 	}
 
