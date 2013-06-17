@@ -7,9 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageHandler;
-import org.springframework.messaging.SubscribableChannel;
 import org.springframework.samples.websocket.echo.EchoWebSocketHandler;
 import org.springframework.samples.websocket.snake.websockethandler.SnakeWebSocketHandler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -17,8 +14,7 @@ import org.springframework.web.messaging.PubSubChannelRegistry;
 import org.springframework.web.messaging.service.method.AnnotationPubSubMessageHandler;
 import org.springframework.web.messaging.stomp.support.StompRelayPubSubMessageHandler;
 import org.springframework.web.messaging.stomp.support.StompWebSocketHandler;
-import org.springframework.web.messaging.support.PubSubChannelRegistryBuilder;
-import org.springframework.web.messaging.support.ReactorMessageChannel;
+import org.springframework.web.messaging.support.ReactorPubSubChannelRegistry;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -73,22 +69,14 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 
 	@Bean
 	public StompWebSocketHandler stompWebSocketHandler() {
-		return new StompWebSocketHandler();
+		StompWebSocketHandler handler = new StompWebSocketHandler(pubSubChannelRegistry());
+		pubSubChannelRegistry().getClientOutputChannel().subscribe(handler);
+		return handler;
 	}
 
 	@Bean
-	public SubscribableChannel<Message<?>, MessageHandler<Message<?>>> clientInputChannel() {
-		return new ReactorMessageChannel(reactor());
-	}
-
-	@Bean
-	public SubscribableChannel<Message<?>, MessageHandler<Message<?>>> clientOutputChannel() {
-		return new ReactorMessageChannel(reactor());
-	}
-
-	@Bean
-	public SubscribableChannel<Message<?>, MessageHandler<Message<?>>> messageBrokerChannel() {
-		return new ReactorMessageChannel(reactor());
+	public PubSubChannelRegistry pubSubChannelRegistry() {
+		return new ReactorPubSubChannelRegistry(reactor());
 	}
 
 	@Bean
@@ -97,25 +85,19 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 
 	@Bean
-	public PubSubChannelRegistry channelRegistry() {
-
-		return PubSubChannelRegistryBuilder
-				.clientGateway(clientInputChannel(), clientOutputChannel(), stompWebSocketHandler())
-				.messageHandler(annotationMessageHandler())
-				.messageBrokerGateway(messageBrokerChannel(), stompRelayMessageHandler())
-				.build();
-	}
-
-	@Bean
 	public StompRelayPubSubMessageHandler stompRelayMessageHandler() {
-		StompRelayPubSubMessageHandler handler = new StompRelayPubSubMessageHandler();
+		StompRelayPubSubMessageHandler handler = new StompRelayPubSubMessageHandler(pubSubChannelRegistry());
 		handler.setAllowedDestinations(new String[] {"/exchange/**", "/queue/*", "/amq/queue/*", "/topic/*" });
+		pubSubChannelRegistry().getClientInputChannel().subscribe(handler);
+		pubSubChannelRegistry().getMessageBrokerChannel().subscribe(handler);
 		return handler;
 	}
 
 	@Bean
 	public AnnotationPubSubMessageHandler annotationMessageHandler() {
-		return new AnnotationPubSubMessageHandler();
+		AnnotationPubSubMessageHandler handler = new AnnotationPubSubMessageHandler(pubSubChannelRegistry());
+		pubSubChannelRegistry().getClientInputChannel().subscribe(handler);
+		return handler;
 	}
 
 	@Bean

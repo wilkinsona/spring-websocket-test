@@ -17,8 +17,7 @@ public class StompController {
 
 		PubSubHeaders headers = PubSubHeaders.create();
 		headers.setDestination("/topic/echo");
-		Message<String> message = MessageBuilder.fromPayloadAndHeaders(
-				"simulated echo", headers.toMessageHeaders()).build();
+		Message<String> message = MessageBuilder.fromPayloadAndHeaders("simulated echo", headers.toMessageHeaders()).build();
 
 		channel.send(message);
 
