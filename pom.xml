@@ -38,6 +38,11 @@
 			<artifactId>spring-websocket</artifactId>
 			<version>${org.springframework-version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.integration</groupId>
+			<artifactId>spring-integration-s4websocket</artifactId>
+			<version>1.0.0.BUILD-SNAPSHOT</version>
+		</dependency>
 
 		<dependency>
 			<groupId>reactor</groupId>
@@ -119,14 +124,14 @@
 			<version>${org.springframework-version}</version>
 			<scope>test</scope>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.eclipse.jetty.websocket</groupId>
 			<artifactId>websocket-client</artifactId>
 			<version>9.0.3.v20130506</version>
 			<scope>test</scope>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.apache.tomcat</groupId>
 			<artifactId>tomcat-websocket</artifactId>
@@ -139,7 +144,7 @@
 			<version>${tomcat-version}</version>
 			<scope>provided</scope>
 		</dependency>
-		
+
 	</dependencies>
 
 	<repositories>
@@ -168,7 +173,7 @@
 			<id>apache.snapshots</id>
 			<url>http://repository.apache.org/content/groups/snapshots-group/</url>
 		</pluginRepository>
-	</pluginRepositories>	
+	</pluginRepositories>
 
 	<build>
 		<finalName>${project.artifactId}</finalName>

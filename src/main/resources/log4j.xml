@@ -25,6 +25,10 @@
 	<logger name="org.springframework.web.messaging">
 		<level value="trace" />
 	</logger>
+	
+	<logger name="org.springframework.integration">
+		<level value="trace" />
+	</logger>
 
 	<root>
 		<priority value="warn" />

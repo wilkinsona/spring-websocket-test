@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.ImportResource;
+import org.springframework.integration.websocket.inbound.UriPathHandlerMapping;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.samples.websocket.echo.EchoWebSocketHandler;
@@ -35,11 +37,11 @@ import reactor.core.Reactors;
 @Configuration
 @EnableWebMvc
 @ComponentScan(basePackages="org.springframework.samples")
+@ImportResource("classpath:META-INF/spring/si-stomp-context.xml")
 public class WebConfig extends WebMvcConfigurerAdapter {
 
 	@Autowired
 	private RootConfig rootConfig;
-
 
 	@Bean
 	public SimpleUrlHandlerMapping handlerMapping() {
@@ -58,6 +60,12 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 		hm.setUrlMap(urlMap);
 
 		return hm;
+	}
+
+	@Bean
+	public UriPathHandlerMapping siHandlerMapper() {
+		// use a low Order to jump ahead of the default mapping
+		return new UriPathHandlerMapping(Integer.MIN_VALUE);
 	}
 
 	@Bean
