@@ -41,7 +41,6 @@ public class StompController {
 
 	@MessageMapping(value="/echo")
 	public void handleEchoMessage(String text) {
-
 		if (text.equals("exception")) {
 			throw new IllegalStateException();
 		}

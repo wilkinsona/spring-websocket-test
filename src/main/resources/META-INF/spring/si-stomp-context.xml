@@ -8,14 +8,19 @@
 		http://www.springframework.org/schema/integration/websocket http://www.springframework.org/schema/integration/websocket/spring-integration-websocket.xsd
 		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
 		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.2.xsd">
+		
+	<bean id="subscriptionRegistry" class="org.springframework.integration.websocket.stomp.StandardSubscriptionRegistry"/>
 
 	<bean id="inboundStompTransformer" class="org.springframework.integration.websocket.stomp.inbound.StompWebSocketMessageInboundTransformer"/>
-	<bean id="outboundStompTransformer" class="org.springframework.integration.websocket.stomp.outbound.StompWebSocketMessageOutboundTransformer"/>
+	<bean id="outboundStompTransformer" class="org.springframework.integration.websocket.stomp.outbound.StompWebSocketMessageOutboundTransformer">
+		<constructor-arg ref="subscriptionRegistry"/>
+	</bean>
 
 	<int:publish-subscribe-channel id="inbound">
 		<int:interceptors>
-			<bean class="org.springframework.integration.websocket.stomp.StompConnectHandlingChannelInterceptor">
+			<bean class="org.springframework.integration.websocket.stomp.inbound.InboundStompChannelInterceptor">
 				<constructor-arg ref="outbound"/>
+				<constructor-arg ref="subscriptionRegistry"/>
 			</bean>
 		</int:interceptors>
 	</int:publish-subscribe-channel>
@@ -34,39 +39,39 @@
 
 	<bean class="org.springframework.integration.endpoint.EventDrivenConsumer">
 		<constructor-arg ref="broker"/>
-		<constructor-arg ref="relayHandler"/>
+		<constructor-arg ref="relayHandlerAdapter"/>
 	</bean>
 
 	<bean class="org.springframework.integration.endpoint.EventDrivenConsumer">
 		<constructor-arg ref="inbound"/>
-		<constructor-arg ref="relayHandler"/>
+		<constructor-arg ref="relayHandlerAdapter"/>
 	</bean>
 
 	<bean id="annotationHandler" class="org.springframework.integration.websocket.stomp.MessageHandlerAdapter">
 		<constructor-arg>
 			<bean class="org.springframework.web.messaging.service.method.AnnotationPubSubMessageHandler">
-				<constructor-arg ref="channelRegistry"/>
+				<constructor-arg ref="siChannelRegistry"/>
 			</bean>
 		</constructor-arg>
 	</bean>
 
-	<bean id="relayHandler" class="org.springframework.integration.websocket.stomp.MessageHandlerAdapter">
-		<constructor-arg>
-			<bean id="relayHandler" class="org.springframework.web.messaging.stomp.support.StompRelayPubSubMessageHandler">
-				<constructor-arg ref="channelRegistry"/>
-				<property name="allowedDestinations">
-					<util:list>
-						<value>/exchange/**</value>
-						<value>/queue/*</value>
-						<value>/amq/queue/*</value>
-						<value>/topic/*</value>
-					</util:list>
-				</property>
-			</bean>
-		</constructor-arg>
+	<bean id="relayHandlerAdapter" class="org.springframework.integration.websocket.stomp.MessageHandlerAdapter">
+		<constructor-arg ref="relayHandler"/>
+	</bean>
+	
+	<bean id="relayHandler" class="org.springframework.web.messaging.stomp.support.StompRelayPubSubMessageHandler">
+		<constructor-arg ref="siChannelRegistry"/>
+		<property name="allowedDestinations">
+			<util:list>
+				<value>/exchange/**</value>
+				<value>/queue/*</value>
+				<value>/amq/queue/*</value>
+				<value>/topic/*</value>
+			</util:list>
+		</property>
 	</bean>
 
-	<bean id="channelRegistry" class="org.springframework.integration.websocket.stomp.StompChannelRegistry">
+	<bean id="siChannelRegistry" class="org.springframework.integration.websocket.stomp.StompChannelRegistry">
 		<property name="clientInputChannel" ref="inbound"/>
 		<property name="clientOutputChannel" ref="outbound"/>
 		<property name="messageBrokerChannel" ref="broker"/>
