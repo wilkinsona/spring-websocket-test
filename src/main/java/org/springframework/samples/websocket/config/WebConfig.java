@@ -12,6 +12,7 @@ import org.springframework.integration.websocket.inbound.UriPathHandlerMapping;
 import org.springframework.samples.websocket.echo.EchoWebSocketHandler;
 import org.springframework.samples.websocket.snake.websockethandler.SnakeWebSocketHandler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.web.messaging.support.WebMessagingTemplate;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
@@ -69,41 +70,61 @@ public class WebConfig extends WebMvcConfigurerAdapter {
 	}
 
 //	@Bean
-//	public StompWebSocketHandler<Message<?>> stompWebSocketHandler() {
-//		StompWebSocketHandler<Message<?>> handler = new StompWebSocketHandler<Message<?>>(channelRegistry());
-//		channelRegistry().getClientOutputChannel().subscribe(handler);
-//		return handler;
-//	}
-
-//	@Bean
-//	public PubSubChannelRegistry<Message<?>, MessageHandler<Message<?>>> channelRegistry() {
-//		return new ReactorPubSubChannelRegistry(reactor());
-//	}
-
-//	@Bean
-//	public Reactor reactor() {
-//		return Reactors.reactor().get();
-//	}
-
-//	@Bean
-//	public StompRelayPubSubMessageHandler<Message<?>> stompRelayMessageHandler() {
-//
-//		StompRelayPubSubMessageHandler<Message<?>> handler =
-//				new StompRelayPubSubMessageHandler<Message<?>>(channelRegistry());
-//
-//		handler.setAllowedDestinations(new String[] {"/exchange/**", "/queue/*", "/amq/queue/*", "/topic/*" });
-//		channelRegistry().getClientInputChannel().subscribe(handler);
-//		channelRegistry().getMessageBrokerChannel().subscribe(handler);
-//		return handler;
-//	}
-
-//	@Bean
 //	public AnnotationPubSubMessageHandler<Message<?>> annotationMessageHandler() {
 //
 //		AnnotationPubSubMessageHandler<Message<?>> handler =
 //				new AnnotationPubSubMessageHandler<Message<?>>(channelRegistry());
 //
 //		channelRegistry().getClientInputChannel().subscribe(handler);
+//		return handler;
+//	}
+//
+//	@Bean
+//	public StompWebSocketHandler stompWebSocketHandler() {
+//		StompWebSocketHandler handler = new StompWebSocketHandler(clientInputChannel());
+//		clientOutputChannel().subscribe(handler);
+//		return handler;
+//	}
+//
+//	@Bean
+//	public SubscribableChannel clientInputChannel() {
+//		return new ReactorMessageChannel(reactor());
+//	}
+//
+//	@Bean
+//	public SubscribableChannel clientOutputChannel() {
+//		return new ReactorMessageChannel(reactor());
+//	}
+//
+//	@Bean
+//	public SubscribableChannel messageBrokerChannel() {
+//		return new ReactorMessageChannel(reactor());
+//	}
+//
+//	@Bean
+//	public Reactor reactor() {
+//		return Reactors.reactor().get();
+//	}
+
+	@Bean
+	public WebMessagingTemplate messagingTemplate() {
+		return new WebMessagingTemplate();
+	}
+
+//	@Bean
+//	public StompRelayWebMessageHandler stompRelayMessageHandler() {
+//		StompRelayWebMessageHandler handler = new StompRelayWebMessageHandler(clientOutputChannel());
+//		handler.setAllowedDestinations(new String[] {"/exchange/**", "/queue/*", "/amq/queue/*", "/topic/*" });
+//		clientInputChannel().subscribe(handler);
+//		messageBrokerChannel().subscribe(handler);
+//		return handler;
+//	}
+
+//	@Bean
+//	public AnnotationWebMessageHandler annotationMessageHandler() {
+//		AnnotationWebMessageHandler handler = new AnnotationWebMessageHandler(
+//				clientOutputChannel(), messageBrokerChannel());
+//		clientInputChannel().subscribe(handler);
 //		return handler;
 //	}
 
